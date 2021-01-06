@@ -61,6 +61,9 @@ function [Twb,Teq,epott]=WetBulb(TemperatureC,Pressure,Humidity,HumidityMode,Con
 % MATLAB port by Robert Kopp
 %
 % Last updated by Robert Kopp, robert-dot-kopp-at-rutgers-dot-edu, Wed Jun 08 18:03:02 EDT 2016
+% Jonathan R. Buzan: 20-12-20 Correct derivative error found by Qinqin Kong. Original was dlnf/dTw.
+%                    Now: f(Tw) * dlnf/dTw. Differences in Tw between new and old routine
+%                    are ±0.00001°C. This is a change in the Newtonian convergence algorithm.
 
     SHR_CONST_TKFRZ = 273.15;
     TemperatureK = TemperatureC + SHR_CONST_TKFRZ;
@@ -323,9 +326,15 @@ function [es_mb,rs,de_mbdT,dlnes_mbdT,rsdT,foftk,fdT]=QSat_2(T_k, p_t)
     % Calculations for used to calculate f(T,ndimpress)
     foftk = ((Cf./T_k).^lambd_a).*(1 - es_mb./p0ndplam).^(vkp.*lambd_a).* ...
             exp(-lambd_a.*goftk);
-    fdT = -lambd_a.*(1./T_k + vkp.*de_mbdT./pminuse + gdT);
-    d2fdT2 = lambd_a.*(1./(T_k.*T_k) - vkp.*de_mbdT.*de_mbdT./(pminuse.*pminuse) - ...
-                       vkp.*d2e_mbdT2./pminuse - d2gdT2);
+% JRB BEGIN
+% 20-12-20 Correct derivative error found by Qinqin Kong. Original was dlnf/dTw.
+%          Now f(Tw) * dlnf/dTw. 
+%    fdT = -lambd_a.*(1./T_k + vkp.*de_mbdT./pminuse + gdT);
+%    d2fdT2 = lambd_a.*(1./(T_k.*T_k) - vkp.*de_mbdT.*de_mbdT./(pminuse.*pminuse) - ...
+%                       vkp.*d2e_mbdT2./pminuse - d2gdT2);
+    fdT = -lambd_a.*(1./T_k + vkp.*de_mbdT./pminuse + gdT) * foftk;
+% JRB END
+
 
     % avoid bad numbers
     rs(rs>1)=NaN;
